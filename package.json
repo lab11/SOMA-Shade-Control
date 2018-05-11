@@ -1,0 +1,32 @@
+{
+  "name": "SOMA-Shade-Control",
+  "version": "0.0.1",
+  "description": "Control SOMA Smart shades with BLE",
+  "main": "soma.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/lab11/SOMA-Shade-Control"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "SOMA",
+    "Shade",
+    "BLE"
+  ],
+  "author": {
+    "name": "Joshua Adkins",
+    "email": "adkins@berkeley.edu"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "noble": "",
+    "debug": "",
+    "yargs": ""
+  },
+  "bugs": {
+    "url": "https://github.com/lab11/SOMA-Shade-Control/issues"
+  },
+  "homepage": "https://github.com/lab11/SOMA-Shade-Control#readme"
+}
