@@ -7,6 +7,7 @@ var debug = require('debug')('SOMA-Shade-Control-http');
 var soma = require('./soma');
 var fs     = require('fs');
 var retry  = require('retry');
+var bodyParser = require('body-parser');
 
 mac_list = ['F4:21:20:D9:FA:CD',
           'DF:93:08:12:38:CF',
@@ -18,58 +19,63 @@ mac_list = ['F4:21:20:D9:FA:CD',
   //key: fs.readFileSync
 //}
 
+var operation_settings = {
+  retries: 2,
+  factor: 0,
+  minTimeout: 1000,
+  maxTimeout: 1000,
+  randomize: false
+}
+
+var shades = new soma();
+
 var app = express();
-app.get('/shades/:which/:param', function (req, res) {
-  console.log('get request');
-  var i = parseInt(req.params['which'], 10);
-  var parameter = req.params['param'];
-  if (parameter == 'battery') {
-    var operation = retry.operation();
-    operation.attempt(function(currentAttempt) {
-      console.log('retry #' + currentAttempt);
-      var shades = new soma([mac_list[i]], function() {
-        shades.get_battery(mac_list[i], function(error,data) {
-          console.log(error)
-          console.log(data)
-          if (operation.retry(error)) {
-            return;
-          }
-          if (error || data == null) {
-            res.sendStatus(500);
-          } else {
-            res.status(200).send('Battery: ' + data.toString());
-          }
-        });
-      });
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.get('/shades', function (req, res) {
+  var shade = parseInt(req.body.shade, 10);
+  var action = req.body.action;
+  if (action == 'battery') {
+    shades.get_battery(mac_list[shade], function(error,data) {
+      if (error || data == null) {
+        res.status(500).send(JSON.stringify({ Result: error }));
+      } else {
+        res.status(200).send(JSON.stringify({ action: data }));
+      }
     });
   }
-  else if (parameter == 'position') {
-    var shades = new soma([mac_list[i]], function() {
-      shades.get_position(mac_list[i], function(error,data) {
-        res.status(200).send('Position: ' + data.toString())
-      });
+  else if (action == 'position') {
+    shades.get_position(mac_list[shade], function(error,data) {
+      if (error || data == null) {
+        res.status(500).send(JSON.stringify({ Result: error }));
+      } else {
+        res.status(200).send(JSON.stringify({ action: data}));
+      }
     });
   }
 });
-app.post('/shades/:which/:param/:value', function (req, res) {
-  var i = parseInt(req.params['which'], 10);
-  var parameter = req.params['param'];
-  var value = parseInt(req.params['value'], 10);
-  if (parameter == 'target') {
-    var shades = new soma([mac_list[i]], function() {
-      shades.set_position(mac_list[i], value, function(error) {
-        if (error) {
-          res.sendStatus(500);
-          return;
-        }
-        res.status(200).send('Success!');
-      });
+
+app.post('/shades', function (req, res) {
+  console.log(req.body);
+  var shade = parseInt(req.body.shade, 10);
+  var action = req.body.action;
+  var value = parseInt(req.body.value, 10);
+  res.setHeader('Content-Type', 'application/json');
+  if (shade > mac_list.length) {
+    res.status(400).send(JSON.stringify({ result: 'Bad shade number' }));
+    return;
+  }
+  if (action == 'target') {
+    shades.set_position(mac_list[shade], value, function(error) {
+      if (error) {
+        res.sendStatus(500);
+        return;
+      }
+      res.status(200).send(JSON.stringify({ result: 'Success!' }));
     });
   }
 });
 
 http.createServer(app).listen(80);
-
-
 
 
