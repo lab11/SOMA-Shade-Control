@@ -21,18 +21,12 @@ const MOTOR_MOVE_DOWN = 0x96;
 
 const DISCOVER_TIMEOUT = 1500;
 
-var soma = function (MACList) {
+var soma = function () {
 
   this._mac_addresses = {};
   this._current_address    = null;
   this._ready_callback = null;
-  this._num_macs = MACList.length;
   this._connection_lock = new AsyncLock();
-
-  for(var i = 0; i < MACList.length; i++) {
-    this._mac_addresses[MACList[i].toLowerCase()] = {};
-  }
-
 
   debug('Creating new SOMA shade object');
 
@@ -49,7 +43,9 @@ soma.prototype.connectDevice = function(mac, cb) {
   else {
     cb('Busy');
   }
-
+  if (this._mac_addresses[mac] == null) {
+    this._mac_addresses[mac] = {};
+  }
   //if (typeof this._mac_addresses[mac].peripheral !== 'undefined') {
   //  debug('Already know it');
   //  this.connect(this._mac_addresses[mac].peripheral);
@@ -197,12 +193,13 @@ soma.prototype.get_battery = function(mac, callback) {
       if(error) {
         debug(error);
         callback(error, null);
-        //return;
+        return;
       }
     }
     that._mac_addresses[mac.toLowerCase()].battery_char.read(function(error, data) {
       if(error) {
         debug(error);
+        callback(error, null);
         return;
       }
 
@@ -215,13 +212,25 @@ soma.prototype.get_battery = function(mac, callback) {
 soma.prototype.get_position = function(mac, callback) {
   var that = this;
   this.connectDevice(mac.toLowerCase(), function(error) {
+    if(error) {
+      debug(error);
+      callback(error, null);
+      return;
+    }
     if(!that._mac_addresses[mac.toLowerCase()].motor_state_char) {
-      callback('DoesNotExist', null);
+      error = 'DoesNotExist'
+      if(error) {
+        debug(error);
+        callback(error, null);
+        return;
+      }
     }
 
     that._mac_addresses[mac.toLowerCase()].motor_state_char.read(function(error, data) {
       if(error) {
         debug(error);
+        callback(error, null);
+        return;
       }
 
       callback(error, data[0]);
@@ -233,13 +242,25 @@ soma.prototype.get_position = function(mac, callback) {
 soma.prototype.set_position = function(mac, position, callback) {
   var that = this;
   this.connectDevice(mac.toLowerCase(), function(error) {
+    if(error) {
+      debug(error);
+      callback(error, null);
+      return;
+    }
     if(!that._mac_addresses[mac.toLowerCase()].motor_target_char) {
-      callback('DoesNotExist');
+      error = 'DoesNotExist'
+      if(error) {
+        debug(error);
+        callback(error, null);
+        return;
+      }
     }
 
     that._mac_addresses[mac.toLowerCase()].motor_target_char.write(new Buffer([position]), false, function(error) {
       if(error) {
         debug(error);
+        callback(error, null);
+        return;
       }
 
       callback(error);
@@ -251,13 +272,25 @@ soma.prototype.set_position = function(mac, position, callback) {
 soma.prototype.move_up = function(mac, callback) {
   var that = this;
   this.connectDevice(mac.toLowerCase(), function(error) {
+      if(error) {
+        debug(error);
+        callback(error, null);
+        return;
+      }
     if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
-      callback('DoesNotExist');
+      error = 'DoesNotExist'
+      if(error) {
+        debug(error);
+        callback(error, null);
+        return;
+      }
     }
 
     that._mac_addresses[mac.toLowerCase()].motor_control_char.write(new Buffer([MOTOR_MOVE_UP]), false, function(error) {
       if(error) {
         debug(error);
+        callback(error, null);
+        return;
       }
 
       callback(error);
@@ -269,13 +302,25 @@ soma.prototype.move_up = function(mac, callback) {
 soma.prototype.move_down = function(mac, callback) {
   var that = this;
   this.connectDevice(mac.toLowerCase(), function(error) {
+    if(error) {
+      debug(error);
+      callback(error, null);
+      return;
+    }
     if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
-      callback('DoesNotExist');
+      error = 'DoesNotExist'
+      if(error) {
+        debug(error);
+        callback(error, null);
+        return;
+      }
     }
 
     that._mac_addresses[mac.toLowerCase()].motor_control_char.write(new Buffer([MOTOR_MOVE_DOWN]), false, function(error) {
       if(error) {
         debug(error);
+        callback(error, null);
+        return;
       }
 
       callback(error);
@@ -287,13 +332,25 @@ soma.prototype.move_down = function(mac, callback) {
 soma.prototype.stop = function(mac, callback) {
   var that = this;
   this.connectDevice(mac.toLowerCase(), function(error) {
+    if(error) {
+      debug(error);
+      callback(error, null);
+      return;
+    }
     if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
-      callback('DoesNotExist');
+      error = 'DoesNotExist'
+      if(error) {
+        debug(error);
+        callback(error, null);
+        return;
+      }
     }
 
     that._mac_addresses[mac.toLowerCase()].motor_control_char.write(new Buffer([MOTOR_STOP]), false, function(error) {
       if(error) {
         debug(error);
+        callback(error, null);
+        return;
       }
 
       callback(error);
@@ -320,7 +377,7 @@ if (require.main === module) {
     .argv;
 
   var mac = argv.m;
-  shades = new soma([mac]);
+  shades = new soma();
   if(argv._[0] == 'battery') {
     shades.get_battery(mac, function(error, data) {
       if(error) {
