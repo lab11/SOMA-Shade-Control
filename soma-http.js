@@ -76,6 +76,14 @@ process_request = function(req, res) {
   }
   else if (action === 'target') {
     var value = parseInt(req.body.value, 10);
+    if (isNaN(value)) {
+      res.status(400).send(JSON.stringify({ "result": "Invalid value for shade target, must be an integer" }));
+      return;
+    }
+    else if (value < 0 || value > 100) {
+      res.status(400).send(JSON.stringify({ "result": "Invalid value for shade target, must be between [0, 100]" }));
+      return;
+    }
     shades.set_position(shade, value, function(error) {
       if (error) {
         res.sendStatus(500);
