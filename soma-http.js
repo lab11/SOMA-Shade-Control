@@ -6,8 +6,8 @@ var https = require('https');
 var debug = require('debug')('SOMA-Shade-Control-http');
 var soma = require('./soma');
 var fs     = require('fs');
-var retry  = require('retry');
 var bodyParser = require('body-parser');
+var basicAuth = require('express-basic-auth');
 
 mac_list = ['F4:21:20:D9:FA:CD',
           'DF:93:08:12:38:CF',
@@ -32,6 +32,7 @@ var shades = new soma();
 var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(basicAuth({users: { 'admin': 'password' }}));
 app.get('/shades', function (req, res) {
   var shade = parseInt(req.body.shade, 10);
   var action = req.body.action;
