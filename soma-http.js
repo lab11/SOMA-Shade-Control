@@ -9,12 +9,6 @@ var fs     = require('fs');
 var bodyParser = require('body-parser');
 var basicAuth = require('express-basic-auth');
 
-mac_list = ['F4:21:20:D9:FA:CD',
-          'DF:93:08:12:38:CF',
-          'FD:97:B5:16:08:4F',
-          'FE:AF:38:31:AC:C7',
-          'F0:8A:FB:BC:E9:82'];
-
 //var options = {
   //key: fs.readFileSync
 //}
@@ -25,7 +19,7 @@ var operation_settings = {
   minTimeout: 1000,
   maxTimeout: 1000,
   randomize: false
-}
+};
 
 var shades = new soma();
 
@@ -33,49 +27,72 @@ var app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(basicAuth({users: { 'admin': 'password' }}));
-app.get('/shades', function (req, res) {
-  var shade = parseInt(req.body.shade, 10);
-  var action = req.body.action;
-  if (action == 'battery') {
-    shades.get_battery(mac_list[shade], function(error,data) {
-      if (error || data == null) {
-        res.status(500).send(JSON.stringify({ Result: error }));
-      } else {
-        res.status(200).send(JSON.stringify({ action: data }));
-      }
-    });
-  }
-  else if (action == 'position') {
-    shades.get_position(mac_list[shade], function(error,data) {
-      if (error || data == null) {
-        res.status(500).send(JSON.stringify({ Result: error }));
-      } else {
-        res.status(200).send(JSON.stringify({ action: data}));
-      }
-    });
-  }
-});
 
-app.post('/shades', function (req, res) {
-  console.log(req.body);
-  var shade = parseInt(req.body.shade, 10);
-  var action = req.body.action;
-  var value = parseInt(req.body.value, 10);
-  res.setHeader('Content-Type', 'application/json');
-  if (shade > mac_list.length) {
-    res.status(400).send(JSON.stringify({ result: 'Bad shade number' }));
+process_request = function(req, res) {
+  var shade = req.body.shade;
+  var shade_split;
+  try {
+    shade_split = shade.split(':');
+  } catch(error) {
+    res.status(400).send(JSON.stringify({ "result": "Invalid shade address, must be a string of the form XX:XX:XX:XX:XX:XX" }));
     return;
   }
-  if (action == 'target') {
-    shades.set_position(mac_list[shade], value, function(error) {
+  if (shade.length != "XX:XX:XX:XX:XX:XX".length && shade_split.length != 6) {
+    res.status(400).send(JSON.stringify({ "result": "Invalid shade address, invalid length" }));
+    return;
+  }
+  for(var i = 0; i < shade_split.length; i++) {
+    var test = parseInt(shade_split[i], 16);
+    if (isNaN(test)) {
+      res.status(400).send(JSON.stringify({ "result": "Invalid shade address, non-hex digits found" }));
+      return;
+    }
+  }
+  var action = req.body.action;
+  if (action === 'battery') {
+    shades.get_battery(shade, function(error,data) {
+      if (error || data == null) {
+        res.status(500).send(JSON.stringify({ "Result": error }));
+      } else {
+        var obj = {};
+        obj[action] = data;
+        res.status(200).send(JSON.stringify(obj));
+        return;
+      }
+    });
+  }
+  else if (action === 'position') {
+    shades.get_position(shade, function(error,data) {
+      if (error || data == null) {
+        res.status(500).send(JSON.stringify({ "result": error }));
+        return;
+      } else {
+        var obj = {};
+        obj[action] = data;
+        res.status(200).send(JSON.stringify(obj));
+        return;
+      }
+    });
+  }
+  else if (action === 'target') {
+    var value = parseInt(req.body.value, 10);
+    shades.set_position(shade, value, function(error) {
       if (error) {
         res.sendStatus(500);
         return;
       }
       res.status(200).send(JSON.stringify({ result: 'Success!' }));
+      return;
     });
   }
-});
+  else {
+    res.sendStatus(400);
+    return;
+  }
+};
+
+app.get('/shades', process_request);
+app.post('/shades', process_request);
 
 http.createServer(app).listen(80);
 

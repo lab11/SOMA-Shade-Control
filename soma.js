@@ -20,11 +20,14 @@ const MOTOR_STOP = 0x50;
 const MOTOR_MOVE_DOWN = 0x96;
 
 const DISCOVER_TIMEOUT = 1500;
+const SCANNING_TIMEOUT = 5000;
 
 var soma = function () {
 
   this._mac_addresses = {};
-  this._current_address    = null;
+  this._current_address = null;
+  this._discover_timeout = null;
+  this._scanning_timeout = null;
   this._ready_callback = null;
   this._connection_lock = new AsyncLock();
 
@@ -50,6 +53,7 @@ soma.prototype.connectDevice = function(mac, cb) {
   //  debug('Already know it');
   //  this.connect(this._mac_addresses[mac].peripheral);
   //} else {
+  this._scanning_timeout = setTimeout(this.scanning_timeout.bind(this), SCANNING_TIMEOUT);
   this.startScanningOnPowerOn();
   //}
 };
@@ -62,14 +66,21 @@ soma.prototype.startScanningOnPowerOn = function() {
     }
 };
 
-soma.prototype.timeout = function() {
-  debug('Called timeout');
+soma.prototype.discover_timeout = function() {
+  debug('Called discover timeout');
   if (this._current_address != undefined
     && this._mac_addresses[this._current_address].peripheral != null
     && this._mac_addresses[this._current_address].peripheral.state == 'connected')
   {
     this._mac_addresses[this._current_address].peripheral.disconnect();
   }
+}
+
+soma.prototype.scanning_timeout = function() {
+  debug('Called scanning timeout');
+  this._ready_callback('DeviceNotFound');
+  this._ready_callback = null;
+  this._current_address    = null;
 }
 
 soma.prototype.connect = function(peripheral, cb) {
@@ -98,7 +109,6 @@ soma.prototype.connect = function(peripheral, cb) {
           services[0].discoverCharacteristics([BATTERY_CHARACTERISTIC_UUID], function(error,chars) {
             debug('discover bat chars');
             if(error) {
-              noble.startScanning([], false);
               debug(error);
             }
             that._mac_addresses[peripheral.address].battery_char = chars[0];
@@ -136,10 +146,11 @@ soma.prototype.on_discover = function (peripheral) {
   //debug('discovered ' + peripheral.address);
   //debug('looking for ' + this._current_address);
   if(this._current_address === peripheral.address) {
+    clearTimeout(that._scanning_timeout);
     this._connection_lock.acquire(this._current_address, function(cb) {
       debug('crit section');
         noble.stopScanning();
-        that._timeout = setTimeout(that.timeout.bind(that), DISCOVER_TIMEOUT);
+        that._discover_timeout = setTimeout(that.discover_timeout.bind(that), DISCOVER_TIMEOUT);
         that._lock_free_cb = cb;
         that._current_address = peripheral.address;
         that._mac_addresses[peripheral.address].peripheral  = peripheral;
@@ -170,7 +181,7 @@ soma.prototype.on_disconnect = function(error) {
   debug('Disconnected');
   if (this._lock_free_cb !== null) this._lock_free_cb();
   debug('Clear timeout');
-  clearTimeout(this._timeout);
+  clearTimeout(this._discover_timeout);
   var delay = setTimeout(function() {
     noble.startScanning([], false);
   }, DISCOVER_TIMEOUT);
@@ -188,7 +199,7 @@ soma.prototype.get_battery = function(mac, callback) {
       callback(error, null);
       return;
     }
-    if(!that._mac_addresses[mac.toLowerCase()].battery_char) {
+    else if(!that._mac_addresses[mac.toLowerCase()].battery_char) {
       error = 'DoesNotExist';
       if(error) {
         debug(error);
@@ -199,8 +210,6 @@ soma.prototype.get_battery = function(mac, callback) {
     that._mac_addresses[mac.toLowerCase()].battery_char.read(function(error, data) {
       if(error) {
         debug(error);
-        callback(error, null);
-        return;
       }
 
       callback(error, data[0]);
@@ -217,7 +226,7 @@ soma.prototype.get_position = function(mac, callback) {
       callback(error, null);
       return;
     }
-    if(!that._mac_addresses[mac.toLowerCase()].motor_state_char) {
+    else if(!that._mac_addresses[mac.toLowerCase()].motor_state_char) {
       error = 'DoesNotExist'
       if(error) {
         debug(error);
@@ -229,8 +238,6 @@ soma.prototype.get_position = function(mac, callback) {
     that._mac_addresses[mac.toLowerCase()].motor_state_char.read(function(error, data) {
       if(error) {
         debug(error);
-        callback(error, null);
-        return;
       }
 
       callback(error, data[0]);
@@ -247,7 +254,7 @@ soma.prototype.set_position = function(mac, position, callback) {
       callback(error, null);
       return;
     }
-    if(!that._mac_addresses[mac.toLowerCase()].motor_target_char) {
+    else if(!that._mac_addresses[mac.toLowerCase()].motor_target_char) {
       error = 'DoesNotExist'
       if(error) {
         debug(error);
@@ -259,8 +266,6 @@ soma.prototype.set_position = function(mac, position, callback) {
     that._mac_addresses[mac.toLowerCase()].motor_target_char.write(new Buffer([position]), false, function(error) {
       if(error) {
         debug(error);
-        callback(error, null);
-        return;
       }
 
       callback(error);
@@ -277,7 +282,7 @@ soma.prototype.move_up = function(mac, callback) {
         callback(error, null);
         return;
       }
-    if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
+    else if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
       error = 'DoesNotExist'
       if(error) {
         debug(error);
@@ -289,8 +294,6 @@ soma.prototype.move_up = function(mac, callback) {
     that._mac_addresses[mac.toLowerCase()].motor_control_char.write(new Buffer([MOTOR_MOVE_UP]), false, function(error) {
       if(error) {
         debug(error);
-        callback(error, null);
-        return;
       }
 
       callback(error);
@@ -307,7 +310,7 @@ soma.prototype.move_down = function(mac, callback) {
       callback(error, null);
       return;
     }
-    if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
+    else if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
       error = 'DoesNotExist'
       if(error) {
         debug(error);
@@ -319,8 +322,6 @@ soma.prototype.move_down = function(mac, callback) {
     that._mac_addresses[mac.toLowerCase()].motor_control_char.write(new Buffer([MOTOR_MOVE_DOWN]), false, function(error) {
       if(error) {
         debug(error);
-        callback(error, null);
-        return;
       }
 
       callback(error);
@@ -337,7 +338,7 @@ soma.prototype.stop = function(mac, callback) {
       callback(error, null);
       return;
     }
-    if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
+    else if(!that._mac_addresses[mac.toLowerCase()].motor_control_char) {
       error = 'DoesNotExist'
       if(error) {
         debug(error);
@@ -349,8 +350,6 @@ soma.prototype.stop = function(mac, callback) {
     that._mac_addresses[mac.toLowerCase()].motor_control_char.write(new Buffer([MOTOR_STOP]), false, function(error) {
       if(error) {
         debug(error);
-        callback(error, null);
-        return;
       }
 
       callback(error);
