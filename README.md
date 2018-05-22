@@ -2,7 +2,7 @@ SOMA Shade Control
 ======================
 
 This project was created to control the SOMA smart shades using BLE.
-Additionally, a basic HTTP interface allows control over the internet.
+Additionally, a basic HTTP/HTTPS interface allows control over the internet.
 
 # Local Control
 
@@ -62,15 +62,20 @@ sudo systemctl start soma-http
 ```
 
 ## Usage
-
-To run normally, just run the script:
+Make sure to change the basic auth credentials `admin:password`, and if using
+https, to point the script to the correct cert and private key location.
+Then, just run the script:
 ```
 sudo ./soma-http.js
+```
+or if using https:
+```
+sudo ./soma-https.js
 ```
 
 ### Interface
 
-The HTTP application has a JSON interface and supports all of the local
+The HTTP/HTTPS application has a JSON interface and supports all of the local
 control commands. Below are some examples using `curl`.
 
 JSON takes the format:
@@ -84,25 +89,25 @@ JSON takes the format:
 
 * Get battery level
 ```
-curl --header "Content-Type: application/json" --request GET -d '{"shade": <shade address>, "action": "battery" }' -u admin:password <Server Address>/shades
+curl -L --header "Content-Type: application/json" --request GET -d '{"shade": <shade address>, "action": "battery" }' -u admin:password <Server Address>/shades
 ```
 * Get current shade position in percent
 ```
-curl --header "Content-Type: application/json" --request GET -d '{"shade": <shade address>, "action": "position" }' -u admin:password <Server Address>/shades
+curl -L --header "Content-Type: application/json" --request GET -d '{"shade": <shade address>, "action": "position" }' -u admin:password <Server Address>/shades
 ```
 * Set a target for the shade position in percent
 ```
-curl --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "target", "value": 50 }' -u admin:password <Server Address>/shades
+curl -L --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "target", "value": 50 }' -u admin:password <Server Address>/shades
 ```
 * Move the shade up
 ```
-curl --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "up"}' -u admin:password <Server Address>/shades
+curl -L --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "up"}' -u admin:password <Server Address>/shades
 ```
 * Move the shade down
 ```
-curl --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "down"}' -u admin:password <Server Address>/shades
+curl -L --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "down"}' -u admin:password <Server Address>/shades
 ```
 * Stop the shade moving
 ```
-curl --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "stop"}' -u admin:password <Server Address>/shades
+curl -L --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "stop"}' -u admin:password <Server Address>/shades
 ```
