@@ -13,14 +13,6 @@ var basicAuth = require('express-basic-auth');
   //key: fs.readFileSync
 //}
 
-var operation_settings = {
-  retries: 2,
-  factor: 0,
-  minTimeout: 1000,
-  maxTimeout: 1000,
-  randomize: false
-};
-
 var shades = new soma();
 
 var app = express();
@@ -49,49 +41,91 @@ process_request = function(req, res) {
     }
   }
   var action = req.body.action;
-  if (action === 'battery') {
-    shades.get_battery(shade, function(error,data) {
-      if (error || data == null) {
-        res.status(500).send(JSON.stringify({ "Result": error }));
-      } else {
-        var obj = {};
-        obj[action] = data;
-        res.status(200).send(JSON.stringify(obj));
-        return;
-      }
-    });
-  }
-  else if (action === 'position') {
-    shades.get_position(shade, function(error,data) {
-      if (error || data == null) {
-        res.status(500).send(JSON.stringify({ "result": error }));
-        return;
-      } else {
-        var obj = {};
-        obj[action] = data;
-        res.status(200).send(JSON.stringify(obj));
-        return;
-      }
-    });
-  }
-  else if (action === 'target') {
-    var value = parseInt(req.body.value, 10);
-    if (isNaN(value)) {
-      res.status(400).send(JSON.stringify({ "result": "Invalid value for shade target, must be an integer" }));
+  if (req.method == 'GET') {
+    if (action === 'battery') {
+      shades.get_battery(shade, function(error,data) {
+        if (error || data == null) {
+          res.status(500).send(JSON.stringify({ "Result": error }));
+        } else {
+          var obj = {};
+          obj[action] = data;
+          res.status(200).send(JSON.stringify(obj));
+          return;
+        }
+      });
+    }
+    else if (action === 'position') {
+      shades.get_position(shade, function(error,data) {
+        if (error || data == null) {
+          res.status(500).send(JSON.stringify({ "result": error }));
+          return;
+        } else {
+          var obj = {};
+          obj[action] = data;
+          res.status(200).send(JSON.stringify(obj));
+          return;
+        }
+      });
+    }
+    else {
+      res.sendStatus(400);
       return;
     }
-    else if (value < 0 || value > 100) {
-      res.status(400).send(JSON.stringify({ "result": "Invalid value for shade target, must be between [0, 100]" }));
-      return;
-    }
-    shades.set_position(shade, value, function(error) {
-      if (error) {
-        res.sendStatus(500);
+  }
+  else if (req.method == 'POST') {
+    if (action === 'target') {
+      var value = parseInt(req.body.value, 10);
+      if (isNaN(value)) {
+        res.status(400).send(JSON.stringify({ "result": "Invalid value for shade target, must be an integer" }));
         return;
       }
-      res.status(200).send(JSON.stringify({ result: 'Success!' }));
+      else if (value < 0 || value > 100) {
+        res.status(400).send(JSON.stringify({ "result": "Invalid value for shade target, must be between [0, 100]" }));
+        return;
+      }
+      shades.set_position(shade, value, function(error) {
+        if (error) {
+          res.sendStatus(500);
+          return;
+        }
+        res.status(200).send(JSON.stringify({ result: 'Success!' }));
+        return;
+      });
+    }
+    else if (action === 'down') {
+      shades.move_down(shade, function(error) {
+        if (error) {
+          res.sendStatus(500);
+          return;
+        }
+        res.status(200).send(JSON.stringify({ result: 'Success!' }));
+        return;
+      });
+    }
+    else if (action === 'up') {
+      shades.move_up(shade, function(error) {
+        if (error) {
+          res.sendStatus(500);
+          return;
+        }
+        res.status(200).send(JSON.stringify({ result: 'Success!' }));
+        return;
+      });
+    }
+    else if (action === 'stop') {
+      shades.stop(shade, function(error) {
+        if (error) {
+          res.sendStatus(500);
+          return;
+        }
+        res.status(200).send(JSON.stringify({ result: 'Success!' }));
+        return;
+      });
+    }
+    else {
+      res.sendStatus(400);
       return;
-    });
+    }
   }
   else {
     res.sendStatus(400);

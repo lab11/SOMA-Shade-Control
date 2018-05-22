@@ -70,7 +70,7 @@ sudo ./soma-http.js
 
 ### Interface
 
-The HTTP application has a JSON interface and supports a subset of the local
+The HTTP application has a JSON interface and supports all of the local
 control commands. Below are some examples using `curl`.
 
 JSON takes the format:
@@ -93,4 +93,16 @@ curl --header "Content-Type: application/json" --request GET -d '{"shade": <shad
 * Set a target for the shade position in percent
 ```
 curl --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "target", "value": 50 }' -u admin:password <Server Address>/shades
+```
+* Move the shade up
+```
+curl --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "up"}' -u admin:password <Server Address>/shades
+```
+* Move the shade down
+```
+curl --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "down"}' -u admin:password <Server Address>/shades
+```
+* Stop the shade moving
+```
+curl --header "Content-Type: application/json" --request POST -d '{"shade": <shade address>, "action": "stop"}' -u admin:password <Server Address>/shades
 ```
