@@ -1,0 +1,13 @@
+[Unit]
+Description=Webserver for receiving shade control commands.
+After=bluetooth.target network.target network-online.target
+
+[Service]
+ExecStart=/home/debian/soma-shade-control/soma-https.js
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=soma-https.js
+
+[Install]
+WantedBy=multi-user.target
