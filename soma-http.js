@@ -2,26 +2,23 @@
 
 var express = require('express');
 var http = require('http');
-var https = require('https');
 var debug = require('debug')('SOMA-Shade-Control-http');
 var soma = require('./soma');
 var fs     = require('fs');
 var bodyParser = require('body-parser');
 var basicAuth = require('express-basic-auth');
-
-//var options = {
-  //key: fs.readFileSync
-//}
+var helmet = require('helmet');
 
 var shades = new soma();
 
 var app = express();
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(helmet());
 app.use(basicAuth({users: { 'admin': 'password' }}));
+app.use(bodyParser.json());
 
 process_request = function(req, res) {
   var shade = req.body.shade;
+  debug('Shade address: ' + shade);
   var shade_split;
   try {
     shade_split = shade.split(':');
@@ -41,6 +38,7 @@ process_request = function(req, res) {
     }
   }
   var action = req.body.action;
+  debug('Action: ' + action);
   if (req.method == 'GET') {
     if (action === 'battery') {
       shades.get_battery(shade, function(error,data) {
@@ -75,6 +73,7 @@ process_request = function(req, res) {
   else if (req.method == 'POST') {
     if (action === 'target') {
       var value = parseInt(req.body.value, 10);
+      debug('Value: ' + value);
       if (isNaN(value)) {
         res.status(400).send(JSON.stringify({ "result": "Invalid value for shade target, must be an integer" }));
         return;
@@ -133,9 +132,9 @@ process_request = function(req, res) {
   }
 };
 
+app.get('/health-check', (req, res) => res.sendStatus(200));
 app.get('/shades', process_request);
 app.post('/shades', process_request);
 
 http.createServer(app).listen(80);
-
 
