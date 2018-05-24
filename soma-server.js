@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 
+var argv   = require('yargs')
+  .option('no-https', {default: false})
+  .argv;
+
 var express = require('express');
 var http = require('http');
-var https = require('https');
 var debug = require('debug')('SOMA-Shade-Control-http');
 var soma = require('./soma');
 var fs     = require('fs');
@@ -10,21 +13,28 @@ var bodyParser = require('body-parser');
 var basicAuth = require('express-basic-auth');
 var helmet = require('helmet');
 
-var options = {
-  cert: fs.readFileSync('/etc/letsencrypt/live/website.com/fullchain.pem'),
-  key:  fs.readFileSync('/etc/letsencrypt/live/website.com/privkey.pem'),
-};
+var https;
+var options;
+if (!argv.no_https) {
+  https = require('https');
+  options = {
+    cert: fs.readFileSync('/etc/letsencrypt/live/website.com/fullchain.pem'),
+    key:  fs.readFileSync('/etc/letsencrypt/live/website.com/privkey.pem'),
+  };
+}
 
 var shades = new soma();
 
 var app = express();
-app.use(function(req, res, next) {
-  if (req.secure) {
-    return next();
-  }
-  debug('redirected');
-  res.redirect(307, 'https://' + req.hostname + req.url);
-});
+if (!argv.no_https) {
+  app.use(function(req, res, next) {
+    if (req.secure) {
+      return next();
+    }
+    debug('redirected');
+    res.redirect(307, 'https://' + req.hostname + req.url);
+  });
+}
 app.use(helmet());
 app.use(basicAuth({users: { 'admin': 'password' }}));
 app.use(bodyParser.json());
@@ -150,5 +160,7 @@ app.get('/shades', process_request);
 app.post('/shades', process_request);
 
 http.createServer(app).listen(80);
-https.createServer(options, app).listen(443);
+if (!argv.no_https) {
+  https.createServer(options, app).listen(443);
+}
 
